@@ -54,99 +54,94 @@ Optional:
 3. Never discard Layer 1 evidence, even when low relevance.
 4. Only Layer 2 summaries are sent to warning channels.
 
-## Layer 1: Retrieval And Logging
+## Layer 1: Taxonomy-Guided Retrieval And Logging
 
 ### Goal
 
-For each company, query public sources and store every retrieved finding with source traceability.
+Use the taxonomy.md as the retrieval backbone to maximize recall of public negative signals relevant to repayment risk.
 
-### Retrieval Scope
+For each company, Layer 1 should:
+1. use the taxonomy as the search anchor,
+2. expand each risk signal into slightly generalized public wording,
+3. search across registry, legal, news, and company-announcement sources,
+4. preserve all retrieved evidence with full traceability.
 
-Search at least:
-- insolvency and legal notices,
-- company registry filings,
-- major news sites,
-- company announcements,
-- public social / press-release pages,
-- court / petition / liquidation sites when available.
+Do not search only the literal taxonomy labels.
 
-### Query Groups
+Examples:
+- `liquidation` → `winding up`, `administration`, `insolvency notice`
+- `new charge` → `registered charge`, `debenture`, `new facility`
+- `shutdown` → `ceased trading`, `operations suspended`, `business closure`
 
-Use these query groups:
-- `legal_insolvency`
-- `creditor_action`
-- `liquidity_stress`
-- `financial_reporting_stress`
-- `operational_shutdown`
-- `commercial_stress`
-- `governance_fraud`
-- `adverse_media`
+### Retrieval Rule
 
-Example patterns:
-- `"<company> liquidation OR insolvency OR winding up"`
-- `"<company> creditors meeting OR statutory demand"`
-- `"<company> charge OR debenture OR secured borrowing"`
-- `"<company> accounts overdue OR late filing"`
-- `"<company> ceased trading OR business closure"`
-- `"<company> penalty OR set-off OR dispute"`
+For each company and each taxonomy category, generate 2–3 search variants:
+- exact risk term
+- generalized public wording
+- source-targeted query where relevant
 
-### Required Raw Evidence Fields
+Examples:
+- `"<company> liquidation OR winding up"`
+- `"<company> charge OR debenture OR refinancing"`
+- `site:gov.uk "<company>" insolvency`
+- `site:thegazette.co.uk "<company>" petition`
 
-Store each retrieved item as one row in `raw_evidence` with:
-- `run_id`
+Priority sources:
+- company registry
+- insolvency / gazette notices
+- major news websites
+- company announcements / customer notices
+
+### Logging Rule
+
+Keep every retrieved record in `raw_evidence`, even if relevance is uncertain.
+
+Each row must include:
 - `company_name`
-- `jurisdiction`
-- `company_number`
-- `query_group`
+- `taxonomy_category`
+- `taxonomy_seed_signal`
 - `search_query`
 - `source_website`
-- `source_type`
 - `title`
-- `event_date`
 - `publish_date`
 - `url`
 - `snippet`
 - `raw_text`
-- `language`
 - `initial_relevance`
-- `initial_risk_hint`
 - `retrieval_timestamp`
 - `dedup_key`
 
-Mandatory rule:
-- `source_website` must always be populated as a dedicated field.
+### Deduplication Rule
 
-### Layer 1 Excel Output
+Within the same company, duplicate articles / filings referring to the same underlying event must be deduplicated in `deduped_events`.
 
-Export one workbook for all companies:
-- `negative_event_monitoring_YYYYMMDD.xlsx` or `negative_event_monitoring_{run_id}.xlsx`
+Deduplication applies only within the same company.
+
+Deduplication key:
+`company_name + normalized_title + publish_date + source_website`
+
+Rules:
+- keep all rows in `raw_evidence`
+- keep only one row per event in `deduped_events`
+- populate `source_count`
+- retain matched queries in `support_queries`
+
+If the same article mentions multiple monitored companies, keep one record for each company.
+
+### Excel Output Rule
+
+Layer 1 must generate exactly one Excel workbook for each monitoring run.
+
+File name:
+`negative_event_monitoring_<run_date>.xlsx`
+
+Example:
+`negative_event_monitoring_20260409.xlsx`
 
 Workbook sheets:
-- `raw_evidence`: full row-level evidence log.
-- `deduped_events`: deduplicated candidate events.
-- `run_summary`: per-company summary stats.
-
-`run_summary` must include:
-- number of raw hits,
-- number of deduplicated events,
-- number of high-risk events,
-- latest event date,
-- highest severity.
-
-`deduped_events` fields:
-- `run_id`
-- `company_name`
-- `event_cluster_id`
-- `normalized_event`
-- `category`
-- `severity`
-- `signal_stage`
-- `event_date`
-- `first_seen_date`
-- `source_count`
-- `source_websites`
-- `support_urls`
-- `evidence_summary`
+- `raw_evidence`
+- `deduped_events`
+- `run_summary`
 
 ## Layer 2: Classification And Summary
 
@@ -156,8 +151,7 @@ Convert logged evidence into structured risk intelligence.
 
 ### Processing Steps
 
-1. Deduplicate overlapping reports for the same underlying event.
-2. Extract factual event statements.
+1. Extract factual event statements.
 3. Classify event into the taxonomy.
 4. Assign `severity` (`Low`, `Medium`, `High`).
 5. Assign `signal_stage` (`early_warning`, `pre_default`, `default`).
@@ -175,15 +169,12 @@ For each monitoring run, produce:
 - `negative_event_summary_YYYYMMDD.json` or `negative_event_summary_{run_id}.json`
 3. Alert-ready concise text per company.
 
-Additionally, in the final assistant message (chat output):
-- Paste the full alert-ready text (the contents that would be written to the `.txt` summary) directly in the message.
-- Provide the Excel workbook path and JSON path.
-- Provide a small human-readable preview table:
-  - `run_summary` (all rows).
-  - Top 10 rows of `deduped_events` (sorted by severity desc, then event_date desc when available).
-  - Top 10 rows of `raw_evidence` (include `source_website`, `title`, `url`, `publish_date`, `initial_relevance`).
-- Do not paste the full raw evidence dataset into chat (it can be large); only preview and point to the workbook.
-
+Chat Output Rules
+When triggered from chatbox like Slack/Codex mention like @codex:
+- send final result back to the same Slack or chatbox thread
+- message body contains only alert related text
+- attach exactly one file: the generated xlsx workbook
+- do not include any other sections
 Alert text template:
 
 ```text

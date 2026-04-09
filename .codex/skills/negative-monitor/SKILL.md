@@ -86,11 +86,17 @@ Examples:
 - `site:gov.uk "<company>" insolvency`
 - `site:thegazette.co.uk "<company>" petition`
 
-Priority sources:
-- company registry
-- insolvency / gazette notices
-- major news websites
-- company announcements / customer notices
+Use jurisdiction-specific public sources when jurisdiction is available.
+
+Examples:
+- UK: Companies House, Gazette, gov.uk notices
+- HK: Companies Registry, HKEX announcements, Gazette
+- SG: ACRA, SGX announcements, Gazette
+- US: SEC filings, state business registry, Chapter 11 notices
+- CN: National Enterprise Credit Information Publicity System, court announcements, exchange filings
+- Global: Reuters, Bloomberg, company press releases, major news websites
+
+If jurisdiction is unavailable, prioritize global news and company announcements.
 
 ### Logging Rule
 

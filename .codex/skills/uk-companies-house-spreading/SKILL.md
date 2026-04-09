@@ -119,6 +119,16 @@ Follow this sequence:
 6. Final review packaging:
 - complete Validation_Log, Metadata, and Review_Summary.
 
+## Reference Files
+
+Use the following reference file during execution:
+- `references/field_mapping.md`
+
+How to use it:
+1. In Workflow Step 3 (Standard field mapping), use `references/field_mapping.md` as the first lookup table for label-to-field mapping.
+2. If a source label matches multiple candidate fields, apply the disambiguation notes in `references/field_mapping.md` first, then apply this SKILL's conservative rules.
+3. If no direct match exists, follow derivation priority in this SKILL and record the decision in `Validation_Log` and `Raw_Extraction` comments.
+4. If this SKILL and `references/field_mapping.md` appear inconsistent, this SKILL.md takes precedence and the conflict must be logged in `Review_Summary`.
 ## Standard Field Set
 
 Income statement fields:
@@ -289,3 +299,4 @@ The output is acceptable only if:
 3. Validation outcomes are explicit and traceable.
 4. Assumptions are clearly stated.
 5. Material uncertainty is flagged, not hidden.
+
